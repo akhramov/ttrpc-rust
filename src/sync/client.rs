@@ -109,7 +109,7 @@ impl Client {
                     let pollers: &mut [libc::pollfd] = &mut pollers;
                     libc::poll(
                         pollers as *mut _ as *mut libc::pollfd,
-                        pollers.len() as u64,
+                        pollers.len() as _,
                         -1,
                     )
                 };

@@ -21,8 +21,8 @@ async fn main() {
         None,
     )
     .unwrap();
-    let sockaddr = path.to_owned() + &"\x00".to_string();
-    let sockaddr = UnixAddr::new_abstract(sockaddr.as_bytes()).unwrap();
+    let sockaddr = path.to_owned();
+    let sockaddr = UnixAddr::new(sockaddr.as_bytes()).unwrap();
     let sockaddr = SockAddr::Unix(sockaddr);
     connect(fd, &sockaddr).unwrap();
 

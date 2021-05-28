@@ -33,7 +33,6 @@ use tokio::{
     sync::watch,
     time::timeout,
 };
-use tokio_vsock::VsockListener;
 
 /// A ttrpc Server (async).
 pub struct Server {
@@ -83,11 +82,6 @@ impl Server {
         self
     }
 
-    pub fn set_domain_vsock(mut self) -> Self {
-        self.domain = Some(Domain::Vsock);
-        self
-    }
-
     pub fn add_listener(mut self, fd: RawFd) -> Result<Server> {
         self.listeners.push(fd);
 
@@ -128,14 +122,6 @@ impl Server {
                     .map_err(err_to_others_err!(e, "from_std error "))?;
 
                 let incoming = UnixIncoming::new(unix_listener);
-
-                self.do_start(listenfd, incoming).await
-            }
-            Some(Domain::Vsock) => {
-                let incoming;
-                unsafe {
-                    incoming = VsockListener::from_raw_fd(listenfd).incoming();
-                }
 
                 self.do_start(listenfd, incoming).await
             }
@@ -201,6 +187,7 @@ impl Server {
             }
             drop(conn_done_tx);
         });
+
         Ok(())
     }
 

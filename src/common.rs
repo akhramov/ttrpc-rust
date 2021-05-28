@@ -16,6 +16,7 @@ use std::str::FromStr;
 #[derive(Debug)]
 pub enum Domain {
     Unix,
+    #[cfg(target_os = "linux")]
     Vsock,
 }
 
@@ -47,6 +48,7 @@ pub fn parse_host(host: &str) -> Result<(Domain, Vec<&str>)> {
 
     let domain = match &hostv[0].to_lowercase()[..] {
         "unix" => Domain::Unix,
+        #[cfg(target = "linux")]
         "vsock" => Domain::Vsock,
         x => return Err(Error::Others(format!("Scheme {:?} is not supported", x))),
     };
@@ -64,6 +66,7 @@ pub fn set_fd_close_exec(fd: RawFd) -> Result<RawFd> {
     Ok(fd)
 }
 
+#[cfg(target_os = "linux")]
 pub fn do_bind(host: &str) -> Result<(RawFd, Domain)> {
     let (domain, hostv) = parse_host(host)?;
 
@@ -106,6 +109,26 @@ pub fn do_bind(host: &str) -> Result<(RawFd, Domain)> {
         }
     };
 
+    setsockopt(fd, sockopt::ReusePort, &true).ok();
+    bind(fd, &sockaddr).map_err(err_to_others_err!(e, ""))?;
+
+    Ok((fd, domain))
+}
+
+#[cfg(target_os = "freebsd")]
+pub fn do_bind(host: &str) -> Result<(RawFd, Domain)> {
+    let (domain, hostv) = parse_host(host)?;
+    let sockaddr: SockAddr;
+    let fd: RawFd = socket(
+        AddressFamily::Unix,
+        SockType::Stream,
+        SockFlag::SOCK_CLOEXEC,
+        None,
+    )
+    .map_err(|e| Error::Socket(e.to_string()))?;
+    let sockaddr_h = hostv[1].to_owned();
+    let sockaddr_u = UnixAddr::new(sockaddr_h.as_bytes()).map_err(err_to_others_err!(e, ""))?;
+    sockaddr = SockAddr::Unix(sockaddr_u);
     setsockopt(fd, sockopt::ReusePort, &true).ok();
     bind(fd, &sockaddr).map_err(err_to_others_err!(e, ""))?;
 
